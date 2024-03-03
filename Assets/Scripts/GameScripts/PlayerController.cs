@@ -10,6 +10,7 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         cam = Camera.main;
+        Cursor.visible = false;
     }
 
     private void Update()
