@@ -36,6 +36,7 @@ public class BeatManager : MonoBehaviour
     [Header("Music")]
     public int bpm;
     public List<AudioSource> audioSources;
+    public AudioSource drumAudioSource;
     public int currentAudioSource;
     private float beatDuration;
     [SerializeField] private float timer;
@@ -158,6 +159,7 @@ public class BeatManager : MonoBehaviour
     
     private void Feedback(int successDegree)
     {
+        drumAudioSource.PlayOneShot(drumAudioSource.clip);
         GameObject feedback = Instantiate(feedbacks[successDegree], Vector3.zero, quaternion.identity);
         Destroy(lastFeedback);
         lastFeedback = feedback;
