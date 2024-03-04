@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,9 @@ public class BeatManager : MonoBehaviour
         set
         {
             scoring = value;
+
+            txtScore.text = Scoring.ToString();
+            
             float remainder = scoring % scoringStep;
             print(remainder);
             if (remainder == 0)
@@ -26,6 +30,8 @@ public class BeatManager : MonoBehaviour
             }
         }
     }
+
+    private PlayerController player;
     
     [Header("Music")]
     public int bpm;
@@ -44,6 +50,7 @@ public class BeatManager : MonoBehaviour
 
     [Header("VFXs")]
     [SerializeField] private List<GameObject> feedbacks;
+    private GameObject lastFeedback;
     
     [Header("Sanity")]
     private float sanity;
@@ -64,18 +71,26 @@ public class BeatManager : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Slider sliderSan;
     [SerializeField] private GameObject gameOverScreen;
+    [SerializeField] private Button bttnRestart;
+    [SerializeField] private TextMeshProUGUI txtScore;
     
     private void Awake()
     {
+        //tempo init
         beatDuration = 60f / bpm;
         Sanity = sanityMax / 2;
         Scoring = 1;
+        
+        //references
         beatControllers = new List<BeatController>(FindObjectsOfType<BeatController>());
         monsters = new List<MonsterController>();
+        player = FindObjectOfType<PlayerController>();
         
+        //audio
         foreach (var source in audioSources) source.volume = 0;
         audioSources[0].volume = 1;
         
+        //launches game
         gameActive = true;
         gameOverScreen.SetActive(false);
     }
@@ -144,6 +159,8 @@ public class BeatManager : MonoBehaviour
     private void Feedback(int successDegree)
     {
         GameObject feedback = Instantiate(feedbacks[successDegree], Vector3.zero, quaternion.identity);
+        Destroy(lastFeedback);
+        lastFeedback = feedback;
         Destroy(feedback, beatDuration);
     }
 
@@ -160,14 +177,18 @@ public class BeatManager : MonoBehaviour
     {
         Cursor.visible = true;
         gameActive = false;
+        bttnRestart.Select();
         gameOverScreen.SetActive(true);
     }
 
     #endregion
+
+    #region Monster Management
+
     
     void MonsterSpawning()
     {
-        if (Sanity >= sanityMax / 2)
+        if (Sanity >= sanityMax)
             return;
 
         monsterTimer += Time.deltaTime;
@@ -181,15 +202,17 @@ public class BeatManager : MonoBehaviour
 
     bool RandomSpawning()
     {
-        int r = Random.Range(0, 5);
-        return r <= 1; //on a une chance sur 2 qu'un monstre spawn
+        int r = Random.Range(0, 4);
+        return r <= 2; //spawn chance = 3/4
     }
 
     void OnSpawnMonster()
     {
         MonsterController newMonster = Instantiate(monsterPrefab, Random.insideUnitSphere, quaternion.identity)
             .GetComponent<MonsterController>();
-        
+
+        newMonster.Initialize(this);
+        newMonster.direction = player.transform.position - newMonster.transform.position;
         monsters.Add(newMonster);
         beatControllers.Add(newMonster);
 
@@ -200,5 +223,13 @@ public class BeatManager : MonoBehaviour
             monsters.Remove(monster);
             beatControllers.Remove(beat);
         };
+        //reduces sanity on damage
+        newMonster.dmgAction = null;
+        newMonster.dmgAction += () =>
+        {
+            Sanity--;
+        };
     }
+
+    #endregion
 }
